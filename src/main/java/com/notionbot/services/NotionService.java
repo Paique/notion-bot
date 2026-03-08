@@ -3,12 +3,17 @@ package com.notionbot.services;
 import com.notionbot.config.Config;
 import notion.api.v1.NotionClient;
 import notion.api.v1.model.databases.Database;
+import notion.api.v1.model.common.PropertyType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class NotionService {
     private static final Logger logger = LoggerFactory.getLogger(NotionService.class);
     private final NotionClient client;
+    private final Map<String, String> titlePropertyCache = new ConcurrentHashMap<>();
 
     public NotionService() {
         String token = Config.getRequired("NOTION_TOKEN");
@@ -47,9 +52,26 @@ public class NotionService {
         createPage(dbId, title);
     }
 
+    private String getTitlePropertyName(String databaseId) {
+        return titlePropertyCache.computeIfAbsent(databaseId, id -> {
+            try {
+                Database db = client.retrieveDatabase(id);
+                return db.getProperties().entrySet().stream()
+                        .filter(entry -> entry.getValue().getType() == PropertyType.Title)
+                        .map(Map.Entry::getKey)
+                        .findFirst()
+                        .orElse("Name"); // Fallback if not found
+            } catch (Exception e) {
+                logger.error("Failed to discover title property for database {}: {}", id, e.getMessage());
+                return "Name";
+            }
+        });
+    }
+
     public void createPage(String databaseId, String title) {
         try {
             logger.info("Creating page in database {}: {}", databaseId, title);
+            String titlePropertyName = getTitlePropertyName(databaseId);
 
             notion.api.v1.model.pages.PageProperty.RichText titleText = new notion.api.v1.model.pages.PageProperty.RichText();
             notion.api.v1.model.pages.PageProperty.RichText.Text text = new notion.api.v1.model.pages.PageProperty.RichText.Text();
@@ -61,10 +83,10 @@ public class NotionService {
 
             client.createPage(
                     notion.api.v1.model.pages.PageParent.database(databaseId),
-                    java.util.Collections.singletonMap("Name", property),
+                    java.util.Collections.singletonMap(titlePropertyName, property),
                     null, null, null);
 
-            logger.info("Successfully created page: {}", title);
+            logger.info("Successfully created page in {} using property {}: {}", databaseId, titlePropertyName, title);
         } catch (Exception e) {
             logger.error("Failed to create page in Notion: {}", e.getMessage(), e);
         }
