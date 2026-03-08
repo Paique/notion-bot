@@ -6,6 +6,7 @@ import com.notionbot.config.Config;
 import com.notionbot.gtd.model.GTDCaptureSession;
 import com.notionbot.services.CacheService;
 import com.notionbot.services.GeminiService;
+import com.notionbot.services.GitHubService;
 import com.notionbot.services.NotionService;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.JDABuilder;
@@ -19,6 +20,7 @@ public class Main {
     private static JDA jda;
     private static NotionService notionService;
     private static GeminiService geminiService;
+    private static GitHubService gitHubService;
     private static CacheService<GTDCaptureSession> sessionCache;
 
     public static void main(String[] args) {
@@ -28,6 +30,7 @@ public class Main {
             // Load Services
             notionService = new NotionService();
             geminiService = new GeminiService();
+            gitHubService = new GitHubService();
             sessionCache = new CacheService<>(30); // 30 min duration for sessions
 
             // Discord Init
@@ -57,5 +60,9 @@ public class Main {
 
     public static GeminiService getGeminiService() {
         return geminiService;
+    }
+
+    public static GitHubService getGitHubService() {
+        return gitHubService;
     }
 }

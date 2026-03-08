@@ -115,7 +115,7 @@ public class GTDListener extends ListenerAdapter {
                         .build())
                         .setComponents().queue();
                 try {
-                    Main.getNotionService().createProject(session.getRefinedText());
+                    Main.getNotionService().createProject(session.getRefinedText(), session.getDescription());
                     event.getHook().editOriginalEmbeds(new EmbedBuilder()
                             .setTitle("✅ Projeto Criado")
                             .setDescription("O projeto **" + session.getRefinedText() + "** foi enviado para o Notion.")
@@ -159,7 +159,8 @@ public class GTDListener extends ListenerAdapter {
                         .setColor(Color.GREEN)
                         .build())
                         .setComponents().queue();
-                Main.getNotionService().addToActions(session.getRefinedText() + " (Concluído)");
+                Main.getNotionService().addToActions(session.getRefinedText() + " (Concluído)",
+                        session.getDescription());
                 sessionCache.remove(userId);
                 break;
 
@@ -215,7 +216,7 @@ public class GTDListener extends ListenerAdapter {
                         .build())
                         .setComponents().queue();
                 try {
-                    Main.getNotionService().addToSomeday(session.getRefinedText());
+                    Main.getNotionService().addToSomeday(session.getRefinedText(), session.getDescription());
                     event.getHook().editOriginalEmbeds(new EmbedBuilder()
                             .setTitle("✅ Salvo")
                             .setDescription("Item adicionado à sua lista **Talvez / Um Dia**.")
@@ -236,7 +237,7 @@ public class GTDListener extends ListenerAdapter {
                         .build())
                         .setComponents().queue();
                 try {
-                    Main.getNotionService().addToReference(session.getRefinedText());
+                    Main.getNotionService().addToReference(session.getRefinedText(), session.getDescription());
                     event.getHook().editOriginalEmbeds(new EmbedBuilder()
                             .setTitle("✅ Salvo")
                             .setDescription("Item adicionado ao seu banco de **Referência**.")
@@ -260,12 +261,18 @@ public class GTDListener extends ListenerAdapter {
                 break;
 
             case "gtd_edit":
-                TextInput editInput = TextInput.create("gtd_edit_text", TextInputStyle.PARAGRAPH)
+                TextInput editTitle = TextInput.create("gtd_edit_text", TextInputStyle.SHORT)
                         .setValue(session.getRefinedText())
                         .setRequired(true)
                         .build();
-                event.replyModal(Modal.create("gtd_modal_edit", "Editar Sugestão da IA")
-                        .addComponents(Label.of("Novo Título", editInput))
+                TextInput editDesc = TextInput
+                        .create("gtd_edit_desc", TextInputStyle.PARAGRAPH)
+                        .setPlaceholder("Adicione mais informações sobre esta tarefa...")
+                        .setValue(session.getDescription())
+                        .setRequired(false)
+                        .build();
+                event.replyModal(Modal.create("gtd_modal_edit", "Editar Sugestão & Detalhes")
+                        .addComponents(Label.of("Título:", editTitle), Label.of("Descrição (opcional):", editDesc))
                         .build()).queue();
                 break;
         }
@@ -286,7 +293,7 @@ public class GTDListener extends ListenerAdapter {
             String who = event.getValue("gtd_delegate_who").getAsString();
             event.deferReply(true).queue();
             Main.getNotionService().createPage(Config.getRequired("DATABASE_WAITING_ID"),
-                    session.getRefinedText() + " (Aguardando: " + who + ")");
+                    session.getRefinedText() + " (Aguardando: " + who + ")", session.getDescription());
             event.getHook().sendMessageEmbeds(new EmbedBuilder()
                     .setTitle("🤝 Delegado com Sucesso")
                     .setDescription("Item: **" + session.getRefinedText() + "**")
@@ -299,7 +306,7 @@ public class GTDListener extends ListenerAdapter {
             String when = event.getValue("gtd_defer_when").getAsString();
             String prefix = (when != null && !when.isEmpty()) ? "[" + when + "] " : "";
             event.deferReply(true).queue();
-            Main.getNotionService().addToActions(prefix + session.getRefinedText());
+            Main.getNotionService().addToActions(prefix + session.getRefinedText(), session.getDescription());
             event.getHook().sendMessageEmbeds(new EmbedBuilder()
                     .setTitle("📅 Adiado com Sucesso")
                     .setDescription("Item: **" + session.getRefinedText() + "**")
@@ -311,6 +318,11 @@ public class GTDListener extends ListenerAdapter {
         } else if (modalId.equals("gtd_modal_edit")) {
             String newText = event.getValue("gtd_edit_text").getAsString();
             session.setRefinedText(newText);
+
+            if (event.getValue("gtd_edit_desc") != null) {
+                session.setDescription(event.getValue("gtd_edit_desc").getAsString());
+            }
+
             session.setCurrentStep(GTDCaptureSession.FlowStep.REFINED);
 
             event.editMessage("✨ **Título Atualizado:**\n> " + newText + "\n\nO que deseja fazer?")
@@ -343,7 +355,13 @@ public class GTDListener extends ListenerAdapter {
     private void startRefinement(GTDCaptureSession session, InteractionHook hook) {
         session.setCurrentStep(GTDCaptureSession.FlowStep.REFINING);
 
-        Main.getGeminiService().refineTextAsync(session.getOriginalText())
+        // Extract GitHub context if available
+        String githubCtx = Main.getGitHubService().extractRepoContext(session.getOriginalText());
+        if (githubCtx != null) {
+            session.setGithubContext(githubCtx);
+        }
+
+        Main.getGeminiService().refineTextAsync(session.getOriginalText(), githubCtx)
                 .thenAccept(refined -> {
                     session.setRefinedText(refined);
                     session.setCurrentStep(GTDCaptureSession.FlowStep.REFINED);

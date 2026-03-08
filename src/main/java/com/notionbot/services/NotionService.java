@@ -32,24 +32,24 @@ public class NotionService {
         }
     }
 
-    public void createProject(String title) {
+    public void createProject(String title, String description) {
         String dbId = Config.getRequired("DATABASE_PROJECTS_ID");
-        createPage(dbId, title);
+        createPage(dbId, title, description);
     }
 
-    public void addToSomeday(String title) {
+    public void addToSomeday(String title, String description) {
         String dbId = Config.getRequired("DATABASE_SOMEDAY_ID");
-        createPage(dbId, title);
+        createPage(dbId, title, description);
     }
 
-    public void addToReference(String title) {
+    public void addToReference(String title, String description) {
         String dbId = Config.getRequired("DATABASE_REFERENCE_ID");
-        createPage(dbId, title);
+        createPage(dbId, title, description);
     }
 
-    public void addToActions(String title) {
+    public void addToActions(String title, String description) {
         String dbId = Config.getRequired("DATABASE_ACTIONS_ID");
-        createPage(dbId, title);
+        createPage(dbId, title, description);
     }
 
     private String getTitlePropertyName(String databaseId) {
@@ -68,23 +68,40 @@ public class NotionService {
         });
     }
 
-    public void createPage(String databaseId, String title) {
+    public void createPage(String databaseId, String title, String description) {
         try {
             logger.info("Creating page in database {}: {}", databaseId, title);
             String titlePropertyName = getTitlePropertyName(databaseId);
 
-            notion.api.v1.model.pages.PageProperty.RichText titleText = new notion.api.v1.model.pages.PageProperty.RichText();
-            notion.api.v1.model.pages.PageProperty.RichText.Text text = new notion.api.v1.model.pages.PageProperty.RichText.Text();
-            text.setContent(title);
-            titleText.setText(text);
+            notion.api.v1.model.pages.PageProperty.RichText titleRichText = new notion.api.v1.model.pages.PageProperty.RichText();
+            notion.api.v1.model.pages.PageProperty.RichText.Text titleText = new notion.api.v1.model.pages.PageProperty.RichText.Text();
+            titleText.setContent(title);
+            titleRichText.setText(titleText);
 
             notion.api.v1.model.pages.PageProperty property = new notion.api.v1.model.pages.PageProperty();
-            property.setTitle(java.util.Collections.singletonList(titleText));
+            property.setTitle(java.util.Collections.singletonList(titleRichText));
+
+            java.util.List<notion.api.v1.model.blocks.Block> children = null;
+            if (description != null && !description.isEmpty()) {
+                notion.api.v1.model.pages.PageProperty.RichText descRichText = new notion.api.v1.model.pages.PageProperty.RichText();
+                notion.api.v1.model.pages.PageProperty.RichText.Text descText = new notion.api.v1.model.pages.PageProperty.RichText.Text();
+                descText.setContent(description);
+                descRichText.setText(descText);
+
+                notion.api.v1.model.blocks.ParagraphBlock.Element element = new notion.api.v1.model.blocks.ParagraphBlock.Element(
+                        java.util.Collections.singletonList(descRichText));
+
+                notion.api.v1.model.blocks.ParagraphBlock block = new notion.api.v1.model.blocks.ParagraphBlock(
+                        element);
+                children = java.util.Collections.singletonList((notion.api.v1.model.blocks.Block) block);
+            }
 
             client.createPage(
                     notion.api.v1.model.pages.PageParent.database(databaseId),
                     java.util.Collections.singletonMap(titlePropertyName, property),
-                    null, null, null);
+                    children,
+                    null,
+                    null);
 
             logger.info("Successfully created page in {} using property {}: {}", databaseId, titlePropertyName, title);
         } catch (Exception e) {

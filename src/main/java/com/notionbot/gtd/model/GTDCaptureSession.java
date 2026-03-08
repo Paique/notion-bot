@@ -4,6 +4,8 @@ public class GTDCaptureSession {
     private final String userId;
     private final String originalText;
     private String refinedText;
+    private String description;
+    private String githubContext;
     private FlowStep currentStep;
 
     public enum FlowStep {
@@ -38,6 +40,22 @@ public class GTDCaptureSession {
 
     public void setRefinedText(String refinedText) {
         this.refinedText = refinedText;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
+    }
+
+    public String getGithubContext() {
+        return githubContext;
+    }
+
+    public void setGithubContext(String githubContext) {
+        this.githubContext = githubContext;
     }
 
     public FlowStep getCurrentStep() {

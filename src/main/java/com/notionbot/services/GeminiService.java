@@ -26,16 +26,16 @@ public class GeminiService {
         this.objectMapper = new ObjectMapper();
     }
 
-    public String refineText(String rawText) {
+    public String refineText(String rawText, String context) {
         try {
-            return refineTextAsync(rawText).get(10, TimeUnit.SECONDS);
+            return refineTextAsync(rawText, context).get(10, TimeUnit.SECONDS);
         } catch (Exception e) {
             logger.error("Failed to refine text synchronously: {}", e.getMessage());
             return rawText;
         }
     }
 
-    public CompletableFuture<String> refineTextAsync(String rawText) {
+    public CompletableFuture<String> refineTextAsync(String rawText, String contextText) {
         logger.info("Requesting Gemini to refine text...");
 
         CompletableFuture<String> future = new CompletableFuture<>();
@@ -43,9 +43,19 @@ public class GeminiService {
         try {
             ObjectNode root = objectMapper.createObjectNode();
             ObjectNode content = root.putArray("contents").addObject();
-            content.putArray("parts").addObject().put("text",
-                    "Você é um assistente GTD. Refine a seguinte entrada curta para ser uma tarefa clara, " +
-                            "física e acionável. Mantenha sucinto e direto. Entrada: " + rawText);
+
+            StringBuilder prompt = new StringBuilder();
+            prompt.append("Você é um assistente GTD altamente eficiente. ");
+            if (contextText != null && !contextText.isEmpty()) {
+                prompt.append("Use o seguinte contexto adicional (README/Markdown) para entender melhor a tarefa: \n\n")
+                        .append(contextText)
+                        .append("\n\n");
+            }
+            prompt.append("Refine a seguinte entrada para ser uma tarefa clara, física e acionável em português. ")
+                    .append("Mantenha o título sucinto e direto. Entrada: ")
+                    .append(rawText);
+
+            content.putArray("parts").addObject().put("text", prompt.toString());
 
             String jsonPayload = objectMapper.writeValueAsString(root);
 
