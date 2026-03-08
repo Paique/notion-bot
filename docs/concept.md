@@ -1,96 +1,95 @@
-# Design Conceitual: Assistente GTD Discord-Notion
+# Conceptual Design: Discord-Notion GTD Assistant
 
-Este bot atua como a ponte de captura e processamento entre a comunicação diária do utilizador no Discord e o seu sistema de produtividade no Notion, seguindo rigorosamente a metodologia **GTD (Getting Things Done)**.
+This bot acts as the capture and processing bridge between the user's daily Discord communication and their productivity system in Notion, strictly following the **GTD (Getting Things Done)** methodology.
 
-O foco não é apenas "guardar tarefas", mas sim atingir o estado de **"mente como água"** (*mind like water*), reduzindo o atrito na captura e utilizando Inteligência Artificial para processar entradas caóticas em ações físicas e organizadas.
-
----
-
-## 1. Objetivo Principal
-
-Minimizar o atrito de "captura" de informação e automatizar o processamento. Em vez de abrir o Notion e navegar por bases de dados, o utilizador envia uma mensagem ou usa o menu de contexto do Discord. 
-
-O bot, alimentado pelo **Gemini**, guia o utilizador pela árvore de decisão do GTD, desdobrando projetos, sugerindo contextos e organizando tudo no Notion.
+The focus is not just on "storing tasks," but on achieving the state of **"mind like water"**, reducing friction in the capture process and using Artificial Intelligence to process chaotic inputs into organized and physical actions.
 
 ---
 
-## 2. Funcionalidades Core e IA (Gemini)
+## 1. Primary Goal
 
-### A. Captura Dinâmica (Esvaziar a Mente)
-- **Self-Capture**: Adicionar um pensamento rapidamente via comando `/add` ou DM.
-- **Message-Capture**: Transformar qualquer mensagem do Discord (própria ou de terceiros) num item GTD via Context Menu (`clique direito` -> `Apps` -> `Capturar GTD`).
-- **Brain Dump Mode**: Um modo de conversação onde o bot ajuda a organizar pensamentos caóticos por lotes.
+Minimize information "capture" friction and automate processing. Instead of opening Notion and navigating through databases, the user sends a message or uses a Discord context menu.
 
-### B. Processamento e Refinamento com IA
-O Gemini não atua apenas como um corretor ortográfico, atua como um **mestre GTD**:
-
-- **Separação Estrita Projeto vs. Ação**: Se a entrada for *"Implementar autenticação OAuth"*, a IA reconhece que é um **Projeto**. O bot interroga: *"Qual é a primeiríssima ação física e visível?"* (ex: *"Ler a documentação da API do Discord"*).
-- **Extração de Contexto e Tempo**: A IA analisa a tarefa e aplica tags automáticas de contexto (ex: `@PC`, `@Rua`, `@Telefone`) e estimativas de tempo (ex: `@15min`, `@1h`).
-- **Geração de Títulos Claros**: Converte *"Ligar EDP"* para *"Telefonar para a EDP para resolver faturação de Março"*.
+The bot, powered by **Gemini**, guides the user through the GTD decision tree, unfolding projects, suggesting contexts, and organizing everything in Notion.
 
 ---
 
-## 3. O Fluxo de Trabalho GTD (Implementação)
+## 2. Core Features and AI (Gemini)
 
-O bot espelha o diagrama de fluxo do GTD através de **Button Interactions** no Discord:
+### A. Dynamic Capture (Brain Dump)
+- **Self-Capture**: Quickly add a thought via the `/add` command or DM.
+- **Message-Capture**: Transform any Discord message (your own or someone else's) into a GTD item via Context Menu (`right-click` -> `Apps` -> `Capture GTD`).
+- **Brain Dump Mode**: A conversational mode where the bot helps organize chaotic thoughts in batches.
 
-### 📥 Inbox (Caixa de Entrada)
-Tudo começa aqui. O bot regista a entrada bruta.
+### B. AI Processing and Refinement
+Gemini acts not just as a spellchecker, but as a **GTD master**:
 
-### 🤔 É Acionável?
-O utilizador (ou a IA de forma sugerida) decide.
-
-#### Se SIM (Acionável):
-- **Regra dos < 2 Minutos?**: Se sim, botão `[Fazer Agora]`. O bot regista como concluído (log de vitórias rápidas).
-- **Projetos**: Se exigir mais do que uma ação, é criado na BD **Projects**. O bot pede a próxima ação física e guarda na BD **Next Actions** ligada ao projeto.
-- **Delegar**: Botão `[Delegar]`. Pede o nome do responsável e cria na BD **Waiting For**.
-- **Adiar (Defer)**: Botão `[Adiar]`. Vai para **Next Actions** com as tags de contexto criadas pelo Gemini.
-
-#### Se NÃO (Não Acionável):
-- **Lixo**: Descarta.
-- **Incubar (Tickler vs Someday)**:
-    - **Someday/Maybe**: Para ideias sem data (ex: *"Aprender Rust"*).
-    - **Tickler**: Para decisões adiadas com data (ex: *"Avaliar compra de bilhetes para a WebSummit"* -> O bot cria um lembrete para uma data específica, mantendo a lista Someday limpa).
-- **Referência**: Vai para a BD **Resources**. O Gemini categoriza automaticamente (ex: *Snippet de Código*, *Finanças*, *Checklist*).
+- **Strict Project vs. Action Separation**: If the input is *"Implement OAuth authentication"*, the AI recognizes it's a **Project**. The bot asks: *"What is the absolute first physical and visible action?"* (e.g., *"Read the Discord API documentation"*).
+- **Context and Time Extraction**: The AI analyzes the task and applies automatic context tags (e.g., `@PC`, `@Errands`, `@Phone`) and time estimates (e.g., `@15min`, `@1h`).
+- **Clear Title Generation**: Converts *"Call utility company"* to *"Call utility company to resolve March billing issue"*.
 
 ---
 
-## 4. Requisitos e Configuração
+## 3. The GTD Workflow (Implementation)
 
-### A. Integrações e Tokens
-- **Discord Bot Token**: Intents de `Message Content` e permissões de `Slash Commands`/`Context Menus`.
-- **Notion Integration Token**: Acesso de edição às bases de dados do GTD.
+The bot mirrors the GTD workflow diagram through **Button Interactions** on Discord:
+
+### 📥 Inbox
+Everything starts here. The bot records the raw input.
+
+### 🤔 Is it Actionable?
+The user (or the AI as a suggestion) decides.
+
+#### If YES (Actionable):
+- **Rule of < 2 Minutes?**: If yes, hit the `[Do It Now]` button. The bot records it as completed (quick win log).
+- **Projects**: If it requires more than one action, it's created in the **Projects** DB. The bot asks for the next physical action and saves it in the **Next Actions** DB linked to the project.
+- **Delegate**: Hit the `[Delegate]` button. Asks for the responsible person's name and creates an entry in the **Waiting For** DB.
+- **Defer**: Hit the `[Defer]` button. Item goes to **Next Actions** with context tags created by Gemini.
+
+#### If NO (Not Actionable):
+- **Trash**: Discard.
+- **Incubate (Tickler vs Someday)**:
+    - **Someday/Maybe**: For ideas without a set date (e.g., *"Learn Rust"*).
+    - **Tickler**: For deferred decisions with a date (e.g., *"Evaluate buying tickets for WebSummit"* -> The bot creates a reminder for a specific date, keeping the Someday list clean).
+- **Reference**: Goes to the **Reference** DB. Gemini automatically categorizes it (e.g., *Code Snippet*, *Finances*, *Checklist*).
+
+---
+
+## 4. Requirements and Configuration
+
+### A. Integrations and Tokens
+- **Discord Bot Token**: `Message Content` Intents and permissions for `Slash Commands`/`Context Menus`.
+- **Notion Integration Token**: Edit access to GTD databases.
 - **Notion Database IDs**: `Inbox`, `Next_Actions`, `Projects`, `Someday_Maybe`, `Reference`, `Waiting_For`.
-- **Gemini API Key**: Para inferência (Gemini 1.5 Flash é ideal pela rapidez em interações de chat).
+- **Gemini API Key**: For inference (Gemini 2.5 Flash is ideal for its speed in chat interactions).
 
-### B. Stack Tecnológico Sugerido
-- **Linguagem**: Java (JDA) ou Golang (DiscordGo). 
-    - *Nota*: Golang é recomendado pela leveza, mas Java com JDA tem um ecossistema robusto.
-- **HTTP Client/SDKs**: Notion SDK e Google AI SDK.
-- **Gestão de Estado**: Em memória para fluxos pendentes com cache (ex: Redis ou Caffeine).
+### B. Technical Stack
+- **Language**: Java 17+ (JDA).
+- **HTTP Client/SDKs**: Notion SDK and Google AI SDK.
+- **State Management**: In-memory for pending flows with caching (e.g., Caffeine).
 
 ---
 
-## 5. Arquitetura e Clean Code (Event Handlers)
+## 5. Architecture and Clean Code (Event Handlers)
 
-Dado o fluxo complexo de decisões do GTD, utilizamos a filosofia de **Early Returns** para manter o código linear e evitar o "If-Else Hell".
+Given the complex flow of GTD decisions, we use the **Early Returns** philosophy to keep the code linear and avoid "If-Else Hell."
 
-### Diretriz Arquitetural
-A separação da lógica da IA e das chamadas da API do Notion deve estar isolada em classes de Serviço (`NotionService`, `AiProcessingService`).
+### Architectural Directive
+Separation of AI logic and Notion API calls must be isolated in Service classes (`NotionService`, `GeminiService`).
 
-### Exemplo Conceitual (Java)
+### Conceptual Example (Java)
 
 ```java
 public void onButtonInteraction(ButtonInteractionEvent event) {
-    // 1. Early Return: Ignorar se não for o utilizador dono do sistema
+    // 1. Early Return: Ignore if not the system owner
     if (!event.getUser().getId().equals(OWNER_ID)) return;
 
     String componentId = event.getComponentId();
 
-    // 2. Early Return: Ignorar botões que não pertençam a este domínio
+    // 2. Early Return: Ignore buttons that do not belong to this domain
     if (!componentId.startsWith("gtd_")) return;
 
-    // 3. Processamento linear
+    // 3. Linear processing
     String action = componentId.split("_")[1];
     
     switch (action) {

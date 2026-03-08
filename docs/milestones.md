@@ -1,51 +1,51 @@
-# Marcos do Projeto: Notion GTD Assistant ✅
+# Project Milestones: Notion GTD Assistant ✅
 
-Este documento define as fases de desenvolvimento e os marcos (milestones) que foram seguidos. Todas as fases foram concluídas com sucesso.
+This document defines the development phases and milestones followed. All phases have been successfully completed.
 
 ---
 
-## 🟢 Fase 1: Fundação e Estrutura ✅
-- **Marco 1.1**: Inicialização do Projeto Gradle e estrutura de pastas. ✅
-- **Marco 1.2**: Configuração de dependências (JDA, Notion, Gemini, Dotenv). ✅
-- **Marco 1.3**: Implementação do sistema de configuração e logs. ✅
+## 🟢 Phase 1: Foundation and Structure ✅
+- **Milestone 1.1**: Gradle Project Initialization and folder structure. ✅
+- **Milestone 1.2**: Dependency configuration (JDA, Notion SDK, Gemini SDK, Dotenv). ✅
+- **Milestone 1.3**: Implementation of configuration system and logging. ✅
 - **Commit**: `feat: init project structure and base configuration` ✅
 
 ---
 
-## 🔵 Fase 2: Conectividade Base ✅
-- **Marco 2.1**: Estabelecimento de conexão com Discord (bot online). ✅
-- **Marco 2.2**: Implementação do `NotionService` (Teste de conectividade). ✅
-- **Marco 2.3**: Implementação do `GeminiService` (Teste de prompt). ✅
+## 🔵 Phase 2: Base Connectivity ✅
+- **Milestone 2.1**: Establish Discord connection (bot online). ✅
+- **Milestone 2.2**: `NotionService` implementation (Connectivity test). ✅
+- **Milestone 2.3**: `GeminiService` implementation (Prompt test). ✅
 - **Commit**: `feat: setup core service connectivity (Discord, Notion, Gemini)` ✅
 
 ---
 
-## 🟡 Fase 3: Captura e Inteligência ✅
-- **Marco 3.1**: Implementação do comando `/add` e Context Menu "Capturar GTD". ✅
-- **Marco 3.2**: Integração do fluxo de Refinamento (Gemini polindo a entrada). ✅
-- **Marco 3.3**: Implementação do sistema de cache para gerir sessões de captura. ✅
+## 🟡 Phase 3: Capture and Intelligence ✅
+- **Milestone 3.1**: Implementation of `/add` command and "Capture GTD" Context Menu. ✅
+- **Milestone 3.2**: Refinement flow integration (Gemini polishing input). ✅
+- **Milestone 3.3**: Cache system implementation to manage capture sessions. ✅
 - **Commit**: `feat: implement capture workflows and AI refinement` ✅
 
 ---
 
-## 🟠 Fase 4: Árvore de Decisão GTD (Processamento) ✅
-- **Marco 4.1**: Implementação dos Handlers de Botões (Início da Árvore de Decisão). ✅
-- **Marco 4.2**: Fluxo de "Acionável?" e "Regra dos 2 Minutos". ✅
-- **Marco 4.3**: Implementação de Modals para delegação e datas. ✅
+## 🟠 Phase 4: GTD Decision Tree (Processing) ✅
+- **Milestone 4.1**: Button Interaction Handlers (Start of Decision Tree). ✅
+- **Milestone 4.2**: "Is it Actionable?" and "2-Minute Rule" flows. ✅
+- **Milestone 4.3**: Modal implementation for delegation and dates. ✅
 - **Commit**: `feat: implement full GTD decision tree and Notion integration` ✅
 
 ---
 
-## 🔴 Fase 5: Integração Total do Ecossistema Notion ✅
-- **Marco 5.1**: Mapeamento final e criação de itens em todas as 6 BDs do Notion. ✅
-- **Marco 5.2**: Lógica de projetos e conexão entre Projetos e Próximas Ações. ✅
-- **Marco 5.3**: Refinamento de metadados e feedbacks visuais (Embeds). ✅
+## 🔴 Phase 5: Total Notion Ecosystem Integration ✅
+- **Milestone 5.1**: Final mapping and creation of items in all 6 Notion DBs. ✅
+- **Milestone 5.2**: Project logic and connection between Projects and Next Actions. ✅
+- **Milestone 5.3**: Metadata refinement and visual feedback (Embeds). ✅
 - **Commit**: `feat: complete notion ecosystem integration and project logic` ✅
 
 ---
 
-## 🏁 Fase 6: Polimento e Entrega ✅
-- **Marco 6.1**: Tratamento de erros global e "Early Returns" em todos os handlers. ✅
-- **Marco 6.2**: Testes de ponta a ponta (E2E) e polimento visual premium. ✅
-- **Marco 6.3**: Documentação final de instalação e uso. ✅
+## 🏁 Phase 6: Polish and Delivery ✅
+- **Milestone 6.1**: Global error handling and "Early Returns" in all handlers. ✅
+- **Milestone 6.2**: End-to-end (E2E) testing and premium visual polish. ✅
+- **Milestone 6.3**: Final installation and usage documentation. ✅
 - **Commit**: `feat: project complete - full GTD ecosystem with Notion integration and premium UI` ✅

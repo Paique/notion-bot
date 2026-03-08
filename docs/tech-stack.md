@@ -1,46 +1,47 @@
-# Stack Tecnológico: Notion GTD Assistant
+# Tech Stack: Notion GTD Assistant
 
-Este documento serve como a fonte única de verdade para as decisões tecnológicas e requisitos de ambiente do projeto. Ele garante que o contexto técnico seja preservado ao longo do desenvolvimento.
+This document serves as the single source of truth for technological decisions and project environment requirements. It ensures that the technical context is preserved throughout development.
 
-## 1. Núcleo da Aplicação
-- **Linguagem**: Java 17+ (LTS).
-- **Sistema de Build**: Gradle (Kotlin DSL ou Groovy).
-- **Framework de Discord**: [JDA (Java Discord API)](https://github.com/discord-jda/JDA) v5.x (Beta 20+ para suporte a slash commands e context menus).
+## 1. Core Application
+- **Language**: Java 17+ (LTS).
+- **Build System**: Gradle (Groovy DSL).
+- **Discord Framework**: [JDA (Java Discord API)](https://github.com/discord-jda/JDA) v6.3.1.
 - **Runtime**: JVM (OpenJDK).
 
-## 2. Integrações de IA e Dados
-- **Motor de IA**: [Google Gemini 3 Flash](https://ai.google.dev/models/gemini).
-  - Escopo: Refinamento de texto, sugestão de contextos, desdobramento de projetos.
-- **Armazenamento**: [Notion API](https://developers.notion.com/).
+## 2. IA and Data Integrations
+- **AI Engine**: [Google Gemini 2.5 Flash](https://ai.google.dev/models/gemini).
+  - Scope: Text refinement, context suggestion, project unfolding.
+- **Storage**: [Notion API](https://developers.notion.com/).
   - SDK: `notion-sdk-jvm-core`.
-  - Estrutura: Multi-database (Inbox, Actions, Projects, etc.).
+  - Structure: Multi-database (Inbox, Actions, Projects, etc.).
 
-## 3. Gestão de Estado e Performance
-- **Cache Local**: [Caffeine Cache](https://github.com/ben-manes/caffeine).
-  - Motivo: Gestão de sessões de interação (botões/modals) sem persistência em DB para dados efêmeros.
+## 3. State Management and Performance
+- **Local Cache**: [Caffeine Cache](https://github.com/ben-manes/caffeine).
+  - Reason: Management of interaction sessions (buttons/modals) without DB persistence for ephemeral data.
 - **JSON Parsing**: [Jackson Databind](https://github.com/FasterXML/jackson-databind).
 - **Logs**: [Logback](https://logback.qos.ch/) + SLF4J.
 
-## 4. Requisitos de Ambiente (Tokens & IDs)
-A aplicação requer um arquivo `.env` na raiz do projeto com as seguintes chaves:
+## 4. Environment Requirements (Tokens & IDs)
+The application requires a `.env` file in the project root with the following keys:
 
 ### Discord
-- `DISCORD_TOKEN`: Token do bot.
-- `OWNER_ID`: ID do utilizador único permitido.
+- `DISCORD_TOKEN`: Bot token.
+- `OWNER_ID`: Unique ID of the allowed user.
 
 ### Notion
 - `NOTION_TOKEN`: Internal Integration Token.
-- `DATABASE_INBOX_ID`: ID da BD de Entrada.
-- `DATABASE_ACTIONS_ID`: ID da BD de Próximas Ações.
-- `DATABASE_PROJECTS_ID`: ID da BD de Projetos.
-- `DATABASE_SOMEDAY_ID`: ID da BD de Algum Dia/Talvez.
-- `DATABASE_REFERENCE_ID`: ID da BD de Referências.
-- `DATABASE_WAITING_ID`: ID da BD de Aguardando (Delegação).
+- `DATABASE_INBOX_ID`: Inbox DB ID.
+- `DATABASE_ACTIONS_ID`: Next Actions DB ID.
+- `DATABASE_PROJECTS_ID`: Projects DB ID.
+- `DATABASE_SOMEDAY_ID`: Someday/Maybe DB ID.
+- `DATABASE_REFERENCE_ID`: Reference DB ID.
+- `DATABASE_WAITING_ID`: Waiting For (Delegation) DB ID.
 
 ### Gemini
-- `GEMINI_API_KEY`: API Key obtida no Google AI Studio.
+- `GEMINI_API_KEY`: API Key obtained from Google AI Studio.
 
-## 5. Arquitetura de Software
-- **SOLID**: Princípios aplicados rigorosamente nas classes de serviço.
-- **Pattern: Early Returns**: Handlers do Discord devem filtrar precondições (ex: check de user ID) no início do método.
-- **Isolation**: Handlers não fazem chamadas diretas a APIs; delegam para `GeminiService` ou `NotionService`.
+## 5. Software Architecture
+- **SOLID**: Principles strictly applied in service classes.
+- **Pattern: Early Returns**: Discord handlers must filter preconditions (e.g., user ID check) at the beginning of the method.
+- **Isolation**: Handlers do not make direct API calls; they delegate to `GeminiService` or `NotionService`.
+- **UI Premium**: Consistent use of `EmbedBuilder` for professional visuals.
