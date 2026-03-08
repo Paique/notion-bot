@@ -8,8 +8,10 @@ import net.dv8tion.jda.api.components.actionrow.ActionRow;
 import net.dv8tion.jda.api.components.buttons.Button;
 import net.dv8tion.jda.api.components.label.Label;
 import net.dv8tion.jda.api.components.textinput.TextInput;
+import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.components.textinput.TextInputStyle;
 import net.dv8tion.jda.api.modals.Modal;
+import java.awt.Color;
 import net.dv8tion.jda.api.events.interaction.ModalInteractionEvent;
 import net.dv8tion.jda.api.events.interaction.command.MessageContextInteractionEvent;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
@@ -63,8 +65,12 @@ public class GTDListener extends ListenerAdapter {
         switch (componentId) {
             case "gtd_accept":
                 session.setCurrentStep(GTDCaptureSession.FlowStep.DECIDING_ACTIONABLE);
-                event.editMessage("✅ **Item aceito:** " + session.getRefinedText()
-                        + "\n\nEste item é **acionável**? (Requer alguma ação física sua?)")
+                event.editMessageEmbeds(new EmbedBuilder()
+                        .setTitle("✅ Item Aceito")
+                        .setDescription("**Processed:** " + session.getRefinedText())
+                        .addField("Próximo Passo", "Este item é **acionável**? (Requer ação física?)", false)
+                        .setColor(Color.CYAN)
+                        .build())
                         .setComponents(
                                 ActionRow.of(
                                         Button.primary("gtd_actionable_yes", "Sim"),
@@ -74,17 +80,25 @@ public class GTDListener extends ListenerAdapter {
 
             case "gtd_actionable_yes":
                 session.setCurrentStep(GTDCaptureSession.FlowStep.DECIDING_MULTISTEP);
-                event.editMessage("🚀 Este item requer **múltiplos passos** (é um Projeto) ou apenas um passo?")
+                event.editMessageEmbeds(new EmbedBuilder()
+                        .setTitle("🚀 Planejamento")
+                        .setDescription("Este item requer **múltiplos passos** (Projeto) ou apenas um?")
+                        .setColor(Color.ORANGE)
+                        .build())
                         .setComponents(
                                 ActionRow.of(
-                                        Button.primary("gtd_multistep_yes", "Vários passos (Projeto)"),
-                                        Button.secondary("gtd_multistep_no", "Apenas um passo")))
+                                        Button.primary("gtd_multistep_yes", "Projeto (Múltiplos)"),
+                                        Button.secondary("gtd_multistep_no", "Ação Única")))
                         .queue();
                 break;
 
             case "gtd_actionable_no":
                 session.setCurrentStep(GTDCaptureSession.FlowStep.PROCESSING_NOTION);
-                event.editMessage("📂 Para onde deve ir este item **não acionável**?")
+                event.editMessageEmbeds(new EmbedBuilder()
+                        .setTitle("📂 Arquivamento")
+                        .setDescription("Para onde deve ir este item **não acionável**?")
+                        .setColor(Color.LIGHT_GRAY)
+                        .build())
                         .setComponents(
                                 ActionRow.of(
                                         Button.danger("gtd_trash", "Lixo"),
@@ -94,30 +108,56 @@ public class GTDListener extends ListenerAdapter {
                 break;
 
             case "gtd_multistep_yes":
-                event.editMessage("🏗️ Criando projeto no Notion: **" + session.getRefinedText() + "**...")
+                event.editMessageEmbeds(new EmbedBuilder()
+                        .setTitle("🏗️ Novo Projeto")
+                        .setDescription("Sincronizando projeto: **" + session.getRefinedText() + "**...")
+                        .setColor(Color.BLUE)
+                        .build())
                         .setComponents().queue();
-                Main.getNotionService().createProject(session.getRefinedText());
+                try {
+                    Main.getNotionService().createProject(session.getRefinedText());
+                    event.getHook().editOriginalEmbeds(new EmbedBuilder()
+                            .setTitle("✅ Projeto Criado")
+                            .setDescription("O projeto **" + session.getRefinedText() + "** foi enviado para o Notion.")
+                            .setColor(Color.GREEN)
+                            .build()).queue();
+                } catch (Exception e) {
+                    LOGGER.error("Failed to create project", e);
+                    event.getHook().editOriginal("❌ Erro ao criar projeto no Notion.").queue();
+                }
                 sessionCache.remove(userId);
                 break;
 
             case "gtd_multistep_no":
                 session.setCurrentStep(GTDCaptureSession.FlowStep.DECIDING_2MIN);
-                event.editMessage("⏳ Leva menos de **2 minutos** para fazer?")
+                event.editMessageEmbeds(new EmbedBuilder()
+                        .setTitle("⏳ Regra dos 2 Minutos")
+                        .setDescription("Leva menos de **2 minutos** para fazer?")
+                        .setColor(Color.YELLOW)
+                        .build())
                         .setComponents(
                                 ActionRow.of(
-                                        Button.primary("gtd_2min_yes", "Sim (Vou fazer agora)"),
-                                        Button.secondary("gtd_2min_no", "Não (Leva mais tempo)")))
+                                        Button.primary("gtd_2min_yes", "Sim (Fazer agora)"),
+                                        Button.secondary("gtd_2min_no", "Não (Adiar/Delegar)")))
                         .queue();
                 break;
 
             case "gtd_2min_yes":
-                event.editMessage("⚡ **Faça agora!** Assim que terminar, clique no botão abaixo para concluir.")
+                event.editMessageEmbeds(new EmbedBuilder()
+                        .setTitle("⚡ Reação Rápida")
+                        .setDescription("**Faça agora!** Assim que terminar, clique abaixo para concluir.")
+                        .setColor(Color.GREEN)
+                        .build())
                         .setComponents(ActionRow.of(Button.success("gtd_done_now", "Concluído!")))
                         .queue();
                 break;
 
             case "gtd_done_now":
-                event.editMessage("✅ Que bom que resolveu logo! Registrado como feito no Notion.")
+                event.editMessageEmbeds(new EmbedBuilder()
+                        .setTitle("✅ Finalizado")
+                        .setDescription("Que bom que resolveu logo! Registrado no Notion.")
+                        .setColor(Color.GREEN)
+                        .build())
                         .setComponents().queue();
                 Main.getNotionService().addToActions(session.getRefinedText() + " (Concluído)");
                 sessionCache.remove(userId);
@@ -125,7 +165,11 @@ public class GTDListener extends ListenerAdapter {
 
             case "gtd_2min_no":
                 session.setCurrentStep(GTDCaptureSession.FlowStep.DECIDING_DELEGATE_DEFER);
-                event.editMessage("🤔 Deseja **delegar** para alguém ou **adiar** para fazer você mesmo depois?")
+                event.editMessageEmbeds(new EmbedBuilder()
+                        .setTitle("🤔 Próximo Passo")
+                        .setDescription("Deseja **delegar** para alguém ou **adiar** para você?")
+                        .setColor(Color.MAGENTA)
+                        .build())
                         .setComponents(
                                 ActionRow.of(
                                         Button.primary("gtd_delegate", "Delegar"),
@@ -155,24 +199,64 @@ public class GTDListener extends ListenerAdapter {
 
             case "gtd_trash":
                 sessionCache.remove(userId);
-                event.editMessage("🗑️ Item descartado (Lixo).").setComponents().queue();
+                event.editMessageEmbeds(new EmbedBuilder()
+                        .setTitle("🗑️ Descartado")
+                        .setDescription("Item removido do fluxo (Lixo).")
+                        .setColor(Color.RED)
+                        .build())
+                        .setComponents().queue();
                 break;
 
             case "gtd_someday":
-                event.editMessage("💡 Adicionando a **Talvez/Um Dia** no Notion...").setComponents().queue();
-                Main.getNotionService().addToSomeday(session.getRefinedText());
+                event.editMessageEmbeds(new EmbedBuilder()
+                        .setTitle("💡 Talvez / Um Dia")
+                        .setDescription("Sincronizando com o Notion...")
+                        .setColor(Color.BLUE)
+                        .build())
+                        .setComponents().queue();
+                try {
+                    Main.getNotionService().addToSomeday(session.getRefinedText());
+                    event.getHook().editOriginalEmbeds(new EmbedBuilder()
+                            .setTitle("✅ Salvo")
+                            .setDescription("Item adicionado à sua lista **Talvez / Um Dia**.")
+                            .setColor(Color.GREEN)
+                            .build()).queue();
+                } catch (Exception e) {
+                    LOGGER.error("Notion Someday error", e);
+                    event.getHook().editOriginal("❌ Erro ao salvar no Notion.").queue();
+                }
                 sessionCache.remove(userId);
                 break;
 
             case "gtd_reference":
-                event.editMessage("📚 Adicionando a **Referência** no Notion...").setComponents().queue();
-                Main.getNotionService().addToReference(session.getRefinedText());
+                event.editMessageEmbeds(new EmbedBuilder()
+                        .setTitle("📚 Referência")
+                        .setDescription("Sincronizando com o Notion...")
+                        .setColor(Color.BLUE)
+                        .build())
+                        .setComponents().queue();
+                try {
+                    Main.getNotionService().addToReference(session.getRefinedText());
+                    event.getHook().editOriginalEmbeds(new EmbedBuilder()
+                            .setTitle("✅ Salvo")
+                            .setDescription("Item adicionado ao seu banco de **Referência**.")
+                            .setColor(Color.GREEN)
+                            .build()).queue();
+                } catch (Exception e) {
+                    LOGGER.error("Notion Reference error", e);
+                    event.getHook().editOriginal("❌ Erro ao salvar no Notion.").queue();
+                }
                 sessionCache.remove(userId);
                 break;
 
             case "gtd_discard":
                 sessionCache.remove(userId);
-                event.editMessage("🗑️ Captura descartada.").setComponents().queue();
+                event.editMessageEmbeds(new EmbedBuilder()
+                        .setTitle("🗑️ Captura Descartada")
+                        .setDescription("O item foi removido do cache e não foi salvo.")
+                        .setColor(Color.DARK_GRAY)
+                        .build())
+                        .setComponents().queue();
                 break;
         }
     }
@@ -190,17 +274,29 @@ public class GTDListener extends ListenerAdapter {
 
         if (modalId.equals("gtd_modal_delegate")) {
             String who = event.getValue("gtd_delegate_who").getAsString();
-            event.reply("🤝 Delegado para: **" + who + "**. Registrado em 'Aguardando' no Notion.")
-                    .setEphemeral(true).queue();
+            event.deferReply(true).queue();
             Main.getNotionService().createPage(Config.getRequired("DATABASE_WAITING_ID"),
                     session.getRefinedText() + " (Aguardando: " + who + ")");
+            event.getHook().sendMessageEmbeds(new EmbedBuilder()
+                    .setTitle("🤝 Delegado com Sucesso")
+                    .setDescription("Item: **" + session.getRefinedText() + "**")
+                    .addField("Responsável", who, true)
+                    .addField("Status", "Enviado para 'Aguardando' no Notion", true)
+                    .setColor(Color.GREEN)
+                    .build()).setEphemeral(true).queue();
             sessionCache.remove(userId);
         } else if (modalId.equals("gtd_modal_defer")) {
             String when = event.getValue("gtd_defer_when").getAsString();
             String prefix = (when != null && !when.isEmpty()) ? "[" + when + "] " : "";
-            event.reply("📅 Adiado! Item adicionado às 'Próximas Ações' no Notion.")
-                    .setEphemeral(true).queue();
+            event.deferReply(true).queue();
             Main.getNotionService().addToActions(prefix + session.getRefinedText());
+            event.getHook().sendMessageEmbeds(new EmbedBuilder()
+                    .setTitle("📅 Adiado com Sucesso")
+                    .setDescription("Item: **" + session.getRefinedText() + "**")
+                    .addField("Quando", (when == null || when.isEmpty()) ? "Não definido" : when, true)
+                    .addField("Status", "Adicionado às 'Próximas Ações'", true)
+                    .setColor(Color.GREEN)
+                    .build()).setEphemeral(true).queue();
             sessionCache.remove(userId);
         }
     }
