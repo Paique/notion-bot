@@ -18,6 +18,8 @@ import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEve
 import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
 import net.dv8tion.jda.api.interactions.InteractionHook;
+import net.dv8tion.jda.api.interactions.callbacks.IReplyCallback;
+
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -224,7 +226,7 @@ public class GTDListener extends ListenerAdapter {
                             .build()).queue();
                 } catch (Exception e) {
                     LOGGER.error("Notion Someday error", e);
-                    event.getHook().editOriginal("❌ Erro ao salvar no Notion.").queue();
+                    event.getHook().editOriginal("Erro ao salvar no Notion.").queue();
                 }
                 sessionCache.remove(userId);
                 break;
@@ -245,7 +247,7 @@ public class GTDListener extends ListenerAdapter {
                             .build()).queue();
                 } catch (Exception e) {
                     LOGGER.error("Notion Reference error", e);
-                    event.getHook().editOriginal("❌ Erro ao salvar no Notion.").queue();
+                    event.getHook().editOriginal("Erro ao salvar no Notion.").queue();
                 }
                 sessionCache.remove(userId);
                 break;
@@ -302,7 +304,10 @@ public class GTDListener extends ListenerAdapter {
                     .setColor(Color.GREEN)
                     .build()).setEphemeral(true).queue();
             sessionCache.remove(userId);
-        } else if (modalId.equals("gtd_modal_defer")) {
+            return;
+        }
+
+        if (modalId.equals("gtd_modal_defer")) {
             String when = event.getValue("gtd_defer_when").getAsString();
             String prefix = (when != null && !when.isEmpty()) ? "[" + when + "] " : "";
             event.deferReply(true).queue();
@@ -315,7 +320,10 @@ public class GTDListener extends ListenerAdapter {
                     .setColor(Color.GREEN)
                     .build()).setEphemeral(true).queue();
             sessionCache.remove(userId);
-        } else if (modalId.equals("gtd_modal_edit")) {
+            return;
+        }
+
+        if (modalId.equals("gtd_modal_edit")) {
             String newText = event.getValue("gtd_edit_text").getAsString();
             session.setRefinedText(newText);
 
@@ -332,15 +340,14 @@ public class GTDListener extends ListenerAdapter {
                                     Button.secondary("gtd_edit", "Editar"),
                                     Button.danger("gtd_discard", "Descartar")))
                     .queue();
+            return;
         }
+        event.reply("Modal inválido, tente novamente.").setEphemeral(true).queue();
     }
 
     private void handleCapture(String userId, String content, InteractionHook hook, Object event) {
-        // Acknowledge immediately (ephemeral)
-        if (event instanceof SlashCommandInteractionEvent) {
-            ((SlashCommandInteractionEvent) event).deferReply(true).queue();
-        } else if (event instanceof MessageContextInteractionEvent) {
-            ((MessageContextInteractionEvent) event).deferReply(true).queue();
+        if (event instanceof IReplyCallback replyCallback) {
+            replyCallback.deferReply(true).queue();
         }
 
         LOGGER.info("User {} is capturing: {}", userId, content);
@@ -348,14 +355,12 @@ public class GTDListener extends ListenerAdapter {
         GTDCaptureSession session = new GTDCaptureSession(userId, content);
         sessionCache.put(userId, session);
 
-        // Next step: AI Refinement
         startRefinement(session, hook);
     }
 
     private void startRefinement(GTDCaptureSession session, InteractionHook hook) {
         session.setCurrentStep(GTDCaptureSession.FlowStep.REFINING);
 
-        // Extract GitHub context if available
         String githubCtx = Main.getGitHubService().extractRepoContext(session.getOriginalText());
         if (githubCtx != null) {
             session.setGithubContext(githubCtx);
@@ -366,7 +371,7 @@ public class GTDListener extends ListenerAdapter {
                     session.setRefinedText(refined);
                     session.setCurrentStep(GTDCaptureSession.FlowStep.REFINED);
 
-                    hook.editOriginal("✨ **Sugestão da IA:**\n> " + refined + "\n\nO que deseja fazer?")
+                    hook.editOriginal("✨ **Sugestão do Gemini:**\n> " + refined + "\n\nO que deseja fazer?")
                             .setComponents(
                                     ActionRow.of(
                                             Button.primary("gtd_accept", "Aceitar"),
@@ -377,7 +382,7 @@ public class GTDListener extends ListenerAdapter {
                 .exceptionally(ex -> {
                     LOGGER.error("Gemini refinement failed", ex);
                     hook.editOriginal(
-                            "❌ Falha ao refinar o texto com IA. Usando original: \n> " + session.getOriginalText())
+                            "Falha ao refinar o texto com IA. Usando original: \n> " + session.getOriginalText())
                             .queue();
                     return null;
                 });

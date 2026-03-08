@@ -19,7 +19,7 @@ public class GitHubService {
 
     public GitHubService() {
         this.client = new OkHttpClient();
-        this.token = Config.get("GITHUB_TOKEN"); // Optional
+        this.token = Config.get("GITHUB_TOKEN");
     }
 
     public String extractRepoContext(String text) {
@@ -47,18 +47,16 @@ public class GitHubService {
             if (response.isSuccessful() && response.body() != null) {
                 String content = response.body().string();
 
-                // Smart Clipping (Anti-Falência): Limit to ~1000 tokens (4000 chars)
+                // Tentando não ir a falência
                 int maxChars = 4000;
                 if (content.length() > maxChars) {
                     logger.info("README for {}/{} is too large ({} chars). Clipping to {} chars.",
                             owner, repo, content.length(), maxChars);
-                    return "[CONTEXTO TRUNCADO POR TAMANHO]\n\n" + content.substring(0, maxChars);
+                    return "[TRUNCATED DUE TO SIZE]\n\n" + content.substring(0, maxChars);
                 }
                 return content;
-            } else {
-                logger.warn("Failed to fetch README for {}/{}: {} {}", owner, repo, response.code(),
-                        response.message());
             }
+            logger.warn("Failed to fetch README for {}/{}: {} {}", owner, repo, response.code(), response.message());
         } catch (IOException e) {
             logger.error("Error fetching GitHub README: {}", e.getMessage());
         }

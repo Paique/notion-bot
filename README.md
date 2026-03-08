@@ -1,4 +1,6 @@
-# Notion GTD Assistant 🚀🤖
+# Notion GTD Assistant
+**Gemini prompts are hardcoded for now, but will be made configurable in the future.**
+**This project is in early development and updates are not guaranteed.**
 
 A powerful Discord bot designed to streamline your **Getting Things Done (GTD)** workflow by integrating Discord and Notion with AI-powered refinement.
 
@@ -29,8 +31,5 @@ The bot is built with Java 17 and Gradle. To run it locally:
     ./gradlew run
     ```
 
-## 🛡️ Architecture
+## Architecture
 Built with **SOLID** principles and a focus on **Early Returns** to ensure a robust and maintainable codebase. The system is decoupled into specialized services for Discord handling, AI inference, and Notion synchronization.
-
----
-*Developed with ❤️ to help you stay organized and productive.*
