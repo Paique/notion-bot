@@ -1,6 +1,10 @@
 package com.notionbot;
 
+import com.notionbot.bot.CommandManager;
+import com.notionbot.bot.GTDListener;
 import com.notionbot.config.Config;
+import com.notionbot.gtd.model.GTDCaptureSession;
+import com.notionbot.services.CacheService;
 import com.notionbot.services.GeminiService;
 import com.notionbot.services.NotionService;
 import net.dv8tion.jda.api.JDA;
@@ -15,6 +19,7 @@ public class Main {
     private static JDA jda;
     private static NotionService notionService;
     private static GeminiService geminiService;
+    private static CacheService<GTDCaptureSession> sessionCache;
 
     public static void main(String[] args) {
         logger.info("Initializing Notion GTD Assistant...");
@@ -23,25 +28,20 @@ public class Main {
             // Load Services
             notionService = new NotionService();
             geminiService = new GeminiService();
+            sessionCache = new CacheService<>(30); // 30 min duration for sessions
 
             // Discord Init
             String token = Config.getRequired("DISCORD_TOKEN");
             jda = JDABuilder.createDefault(token)
                     .setActivity(Activity.playing("GTD Workflow"))
                     .enableIntents(GatewayIntent.MESSAGE_CONTENT, GatewayIntent.GUILD_MEMBERS)
+                    .addEventListeners(new GTDListener(sessionCache))
                     .build();
 
-            // Testing services (Log only)
-            String inboxId = Config.get("DATABASE_INBOX_ID");
-            if (inboxId != null) {
-                notionService.testConnection(inboxId);
-            }
+            jda.awaitReady();
 
-            String refined = geminiService.refineText("comprar leite");
-            logger.info("Gemini Test Result: {}", refined);
-
-            // Register Listeners (Phase 2 & 3)
-            // jda.addEventListener(new GTDListener());
+            // Register Commands
+            CommandManager.registerCommands(jda);
 
             logger.info("Notion GTD Bot is online and services are ready!");
 

@@ -1,0 +1,32 @@
+# Gradle
+# Compiled output and caches
+
+.gradle
+/build/
+gradle-app.setting
+!gradle-wrapper.jar
+*.jar
+*.war
+*.ear
+*.class
+
+# IntelliJ IDEA
+# IDE-specific project files
+.idea/
+*.iml
+out/
+
+# Other common files to ignore
+# Logs
+logs/
+*.log
+*.tmp
+*.swp
+
+# OS-specific files
+.DS_Store
+Thumbs.db
+
+# Maven (if any maven integration is used)
+target/
+
