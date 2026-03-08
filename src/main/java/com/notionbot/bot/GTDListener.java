@@ -258,6 +258,16 @@ public class GTDListener extends ListenerAdapter {
                         .build())
                         .setComponents().queue();
                 break;
+
+            case "gtd_edit":
+                TextInput editInput = TextInput.create("gtd_edit_text", TextInputStyle.PARAGRAPH)
+                        .setValue(session.getRefinedText())
+                        .setRequired(true)
+                        .build();
+                event.replyModal(Modal.create("gtd_modal_edit", "Editar Sugestão da IA")
+                        .addComponents(Label.of("Novo Título", editInput))
+                        .build()).queue();
+                break;
         }
     }
 
@@ -298,6 +308,18 @@ public class GTDListener extends ListenerAdapter {
                     .setColor(Color.GREEN)
                     .build()).setEphemeral(true).queue();
             sessionCache.remove(userId);
+        } else if (modalId.equals("gtd_modal_edit")) {
+            String newText = event.getValue("gtd_edit_text").getAsString();
+            session.setRefinedText(newText);
+            session.setCurrentStep(GTDCaptureSession.FlowStep.REFINED);
+
+            event.editMessage("✨ **Título Atualizado:**\n> " + newText + "\n\nO que deseja fazer?")
+                    .setComponents(
+                            ActionRow.of(
+                                    Button.primary("gtd_accept", "Aceitar"),
+                                    Button.secondary("gtd_edit", "Editar"),
+                                    Button.danger("gtd_discard", "Descartar")))
+                    .queue();
         }
     }
 
