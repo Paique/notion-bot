@@ -4,11 +4,11 @@ Este documento define as fases de desenvolvimento e os marcos (milestones) que s
 
 ---
 
-## 🟢 Fase 1: Fundação e Estrutura
-- **Marco 1.1**: Inicialização do Projeto Gradle e estrutura de pastas.
-- **Marco 1.2**: Configuração de dependências (JDA, Notion, Gemini, Dotenv, Caffeine).
-- **Marco 1.3**: Implementação do sistema de configuração e logs.
-- **Commit**: `feat: init project structure and base configuration`
+## 🟢 Fase 1: Fundação e Estrutura ✅
+- **Marco 1.1**: Inicialização do Projeto Gradle e estrutura de pastas. ✅
+- **Marco 1.2**: Configuração de dependências (JDA, Notion, Gemini, Dotenv, Caffeine). ✅
+- **Marco 1.3**: Implementação do sistema de configuração e logs. ✅
+- **Commit**: `feat: init project structure and base configuration` ✅
 
 ---
 
