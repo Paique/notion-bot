@@ -30,3 +30,5 @@ Thumbs.db
 # Maven (if any maven integration is used)
 target/
 
+# Secrets
+.env
