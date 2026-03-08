@@ -1,0 +1,26 @@
+Design Conceitual: Assistente GTD Discord-NotionEste bot atua como a ponte de captura e processamento entre a comunicação diária do utilizador no Discord e o seu sistema de produtividade no Notion, seguindo rigorosamente a metodologia GTD (Getting Things Done).O foco não é apenas "guardar tarefas", mas sim atingir o estado de "mente como água" (mind like water), reduzindo o atrito na captura e utilizando Inteligência Artificial para processar entradas caóticas em ações físicas e organizadas.1. Objetivo PrincipalMinimizar o atrito de "captura" de informação e automatizar o processamento. Em vez de abrir o Notion e navegar por bases de dados, o utilizador envia uma mensagem ou usa o menu de contexto do Discord. O bot, alimentado pelo Gemini, guia o utilizador pela árvore de decisão do GTD, desdobrando projetos, sugerindo contextos e organizando tudo no Notion.2. Funcionalidades Core e IA (Gemini)A. Captura Dinâmica (Esvaziar a Mente)Self-Capture: Adicionar um pensamento rapidamente via comando /add ou DM.Message-Capture: Transformar qualquer mensagem do Discord (própria ou de terceiros) num item GTD via Context Menu (clique direito -> Apps -> Capturar GTD).Brain Dump Mode: Um modo de conversação onde o bot ajuda a organizar pensamentos caóticos por lotes.B. Processamento e Refinamento com IAO Gemini não atua apenas como um corretor ortográfico, atua como um mestre GTD:Separação Estrita Projeto vs. Ação: Se a entrada for "Implementar autenticação OAuth", a IA reconhece que é um Projeto. O bot interroga: "Qual é a primeiríssima ação física e visível?" (ex: "Ler a documentação da API do Discord").Extração de Contexto e Tempo: A IA analisa a tarefa e aplica tags automáticas de contexto (ex: @PC, @Rua, @Telefone) e estimativas de tempo (ex: @15min, @1h).Geração de Títulos Claros: Converte "Ligar EDP" para "Telefonar para a EDP para resolver faturação de Março".3. O Fluxo de Trabalho GTD (Implementação)O bot espelha o diagrama de fluxo do GTD através de Button Interactions no Discord:Inbox (Caixa de Entrada): Tudo começa aqui. O bot regista a entrada bruta.É Acionável? O utilizador (ou a IA de forma sugerida) decide.Se SIM (Acionável):Regra dos < 2 Minutos?: Se sim, botão [Fazer Agora]. O bot regista como concluído (log de vitórias rápidas).Projetos: Se exigir mais do que uma ação, é criado na BD Projects. O bot pede a próxima ação física e guarda na BD Next Actions ligada ao projeto.Delegar: Botão [Delegar]. Pede o nome do responsável e cria na BD Waiting For.Adiar (Defer): Botão [Adiar]. Vai para Next Actions com as tags de contexto criadas pelo Gemini.Se NÃO (Não Acionável):Lixo: Descarta.Incubar (Tickler vs Someday):Someday/Maybe: Para ideias sem data (ex: "Aprender Rust").Tickler: Para decisões adiadas com data (ex: "Avaliar compra de bilhetes para a WebSummit" -> O bot cria um lembrete para uma data específica, mantendo a lista Someday limpa).Referência: Vai para a BD Resources. O Gemini categoriza automaticamente (ex: Snippet de Código, Finanças, Checklist).4. Requisitos e ConfiguraçãoA. Integrações e TokensDiscord Bot Token: Intents de Message Content e permissões de Slash Commands/Context Menus.Notion Integration Token: Acesso de edição às bases de dados do GTD.Notion Database IDs: Inbox, Next_Actions, Projects, Someday_Maybe, Reference, Waiting_For.Gemini API Key: Para inferência (Gemini 3 Flash é ideal pela rapidez em interações de chat).B. Stack Tecnológico Sugerido (Focado em Engenharia de Software)Linguagem: Java (JDA) ou Golang (DiscordGo). Golang é altamente recomendado para este tipo de microserviço de I/O intensivo devido à leveza e concorrência nativa, mas Java com JDA tem um ecossistema robusto.HTTP Client/SDKs: Notion SDK (ou chamadas REST diretas via OkHttp/net/http) e Google AI SDK.Gestão de Estado: Em memória para fluxos pendentes de botões no Discord (com cache expiráveis como Redis ou Caffeine em Java, para evitar fugas de memória).5. Arquitetura e Clean Code (Event Handlers)Dado o fluxo complexo de decisões do GTD, o código dos Listeners do Discord pode facilmente tornar-se um "Callback Hell" ou "If-Else Hell".Diretriz Arquitetural (Early Returns & Pattern Matching):Os handlers de botões (ButtonInteractionEvent) devem utilizar a filosofia de Early Returns para manter o fluxo linear.Exemplo Conceitual (Pseudo-Java/Golang):public void onButtonInteraction(ButtonInteractionEvent event) {
+    // 1. Early Return: Ignorar se não for o utilizador dono do sistema
+    if (!event.getUser().getId().equals(OWNER_ID)) return;
+
+    String componentId = event.getComponentId();
+
+    // 2. Early Return: Ignorar botões que não pertençam a este domínio
+    if (!componentId.startsWith("gtd_")) return;
+
+    // 3. Processamento linear
+    String action = componentId.split("_")[1];
+    
+    switch (action) {
+        case "2min":
+            handleTwoMinuteRule(event);
+            break;
+        case "delegate":
+            promptDelegateModal(event);
+            break;
+        case "tickler":
+            promptDateModal(event);
+            break;
+        // ...
+    }
+}
+A separação da lógica da IA (Gemini) e das chamadas da API do Notion deve estar isolada em classes de Serviço (NotionService, AiProcessingService), mantendo os handlers do Discord exclusivamente responsáveis pelo I/O da interface.
