@@ -2,11 +2,17 @@ package com.notionbot.services;
 
 import com.notionbot.config.Config;
 import notion.api.v1.NotionClient;
+import notion.api.v1.model.blocks.Block;
+import notion.api.v1.model.blocks.ParagraphBlock;
 import notion.api.v1.model.databases.Database;
 import notion.api.v1.model.common.PropertyType;
+import notion.api.v1.model.pages.PageParent;
+import notion.api.v1.model.pages.PageProperty;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -75,40 +81,40 @@ public class NotionService {
             logger.info("Creating page in database {}: {} (dueDate: {})", databaseId, title, dueDate);
             String titlePropertyName = getTitlePropertyName(databaseId);
 
-            notion.api.v1.model.pages.PageProperty.RichText titleRichText = new notion.api.v1.model.pages.PageProperty.RichText();
-            notion.api.v1.model.pages.PageProperty.RichText.Text titleText = new notion.api.v1.model.pages.PageProperty.RichText.Text();
+            PageProperty.RichText titleRichText = new PageProperty.RichText();
+            PageProperty.RichText.Text titleText = new PageProperty.RichText.Text();
             titleText.setContent(title);
             titleRichText.setText(titleText);
 
-            notion.api.v1.model.pages.PageProperty property = new notion.api.v1.model.pages.PageProperty();
-            property.setTitle(java.util.Collections.singletonList(titleRichText));
+            PageProperty property = new PageProperty();
+            property.setTitle(Collections.singletonList(titleRichText));
 
-            java.util.Map<String, notion.api.v1.model.pages.PageProperty> properties = new java.util.HashMap<>();
+            java.util.Map<String, PageProperty> properties = new java.util.HashMap<>();
             properties.put(titlePropertyName, property);
 
             if (dueDate != null && !dueDate.isEmpty()) {
-                notion.api.v1.model.pages.PageProperty dateProperty = new notion.api.v1.model.pages.PageProperty();
-                notion.api.v1.model.pages.PageProperty.Date dateObj = new notion.api.v1.model.pages.PageProperty.Date(dueDate, null, null);
+                PageProperty dateProperty = new PageProperty();
+                PageProperty.Date dateObj = new PageProperty.Date(dueDate, null, null);
                 dateProperty.setDate(dateObj);
                 properties.put(DUE_DATE_PROPERTY, dateProperty);
             }
 
-            java.util.List<notion.api.v1.model.blocks.Block> children = null;
+            List<Block> children = null;
             if (description != null && !description.isEmpty()) {
-                notion.api.v1.model.pages.PageProperty.RichText descRichText = new notion.api.v1.model.pages.PageProperty.RichText();
-                notion.api.v1.model.pages.PageProperty.RichText.Text descText = new notion.api.v1.model.pages.PageProperty.RichText.Text();
+                PageProperty.RichText descRichText = new PageProperty.RichText();
+                PageProperty.RichText.Text descText = new PageProperty.RichText.Text();
                 descText.setContent(description);
                 descRichText.setText(descText);
 
-                notion.api.v1.model.blocks.ParagraphBlock.Element element = new notion.api.v1.model.blocks.ParagraphBlock.Element(
-                        java.util.Collections.singletonList(descRichText));
+                ParagraphBlock.Element element = new ParagraphBlock.Element(
+                        Collections.singletonList(descRichText));
 
-                notion.api.v1.model.blocks.ParagraphBlock block = new notion.api.v1.model.blocks.ParagraphBlock(element);
-                children = java.util.Collections.singletonList((notion.api.v1.model.blocks.Block) block);
+                ParagraphBlock block = new ParagraphBlock(element);
+                children = Collections.singletonList(block);
             }
 
             client.createPage(
-                    notion.api.v1.model.pages.PageParent.database(databaseId),
+                    PageParent.database(databaseId),
                     properties,
                     children,
                     null,
