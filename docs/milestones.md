@@ -67,10 +67,10 @@ This document defines the development phases and milestones followed. All phases
 ---
 
 ## 📅 Phase 10: Smart ETA & Date Properties 🏗️
-- **Milestone 10.1**: Extract ETA/Deadline from Gemini refinement or Natural Language.
-- **Milestone 10.2**: Implement Notion "Date" property mapping (moving away from title prefixes).
-- **Milestone 10.3**: Refine Discord UI to suggest or allow manual date adjustments.
-- **Commit**: `feat: implement dedicated ETA properties and smart date parsing`
+- **Milestone 10.1**: Extract ETA/Deadline from Gemini refinement or Natural Language. ✅
+- **Milestone 10.2**: Implement Notion "Date" property mapping (moving away from title prefixes). ✅
+- **Milestone 10.3**: Refine Discord UI to suggest or allow manual date adjustments. ✅
+- **Commit**: `feat: implement dedicated ETA properties and smart date parsing` ✅
 
 ---
 
