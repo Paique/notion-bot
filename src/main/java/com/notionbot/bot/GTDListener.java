@@ -10,8 +10,12 @@ import net.dv8tion.jda.api.components.label.Label;
 import net.dv8tion.jda.api.components.textinput.TextInput;
 import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.components.textinput.TextInputStyle;
+import net.dv8tion.jda.api.interactions.commands.OptionMapping;
+import net.dv8tion.jda.api.interactions.modals.ModalMapping;
 import net.dv8tion.jda.api.modals.Modal;
+
 import java.awt.Color;
+
 import net.dv8tion.jda.api.events.interaction.ModalInteractionEvent;
 import net.dv8tion.jda.api.events.interaction.command.MessageContextInteractionEvent;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
@@ -40,7 +44,14 @@ public class GTDListener extends ListenerAdapter {
     public void onSlashCommandInteraction(@NotNull SlashCommandInteractionEvent event) {
         if (!event.getName().equals("add"))
             return;
-        String item = event.getOption("item").getAsString();
+        OptionMapping itemOption = event.getOption("item");
+
+        if (itemOption == null) {
+            event.getInteraction().reply("item to add it's null!").setEphemeral(true).queue();
+            return;
+        }
+
+        String item = itemOption.getAsString();
         handleCapture(event.getUser().getId(), item, event.getHook(), event);
     }
 
@@ -70,14 +81,14 @@ public class GTDListener extends ListenerAdapter {
     }
 
     private void handleButton(ButtonInteractionEvent event, String componentId, GTDCaptureSession session,
-            String userId) {
+                              String userId) {
         switch (componentId) {
             case "gtd_accept" -> handleAccept(event, session);
             case "gtd_actionable_yes" -> handleActionableYes(event, session);
             case "gtd_actionable_no" -> handleActionableNo(event, session);
             case "gtd_multistep_yes" -> handleMultistepYes(event, session, userId);
             case "gtd_multistep_no" -> handleMultistepNo(event, session);
-            case "gtd_2min_yes" -> handle2MinYes(event, session);
+            case "gtd_2min_yes" -> handle2MinYes(event);
             case "gtd_2min_no" -> handle2MinNo(event, session);
             case "gtd_done_now" -> handleDoneNow(event, session, userId);
             case "gtd_delegate" -> handleDelegateButton(event);
@@ -97,10 +108,10 @@ public class GTDListener extends ListenerAdapter {
             desc += "\n📅 **Data:** " + session.getDueDate();
 
         event.editMessageEmbeds(new EmbedBuilder()
-                .setTitle("✅ Item Aceito")
-                .setDescription(desc)
-                .addField("Próximo Passo", "Este item é **acionável**? (Requer ação física?)", false)
-                .setColor(Color.CYAN).build())
+                        .setTitle("✅ Item Aceito")
+                        .setDescription(desc)
+                        .addField("Próximo Passo", "Este item é **acionável**? (Requer ação física?)", false)
+                        .setColor(Color.CYAN).build())
                 .setComponents(ActionRow.of(Button.primary("gtd_actionable_yes", "Sim"),
                         Button.secondary("gtd_actionable_no", "Não")))
                 .queue();
@@ -109,9 +120,9 @@ public class GTDListener extends ListenerAdapter {
     private void handleActionableYes(ButtonInteractionEvent event, GTDCaptureSession session) {
         session.setCurrentStep(GTDCaptureSession.FlowStep.DECIDING_MULTISTEP);
         event.editMessageEmbeds(new EmbedBuilder()
-                .setTitle("🚀 Planejamento")
-                .setDescription("Este item requer **múltiplos passos** (Projeto) ou apenas um?")
-                .setColor(Color.ORANGE).build())
+                        .setTitle("🚀 Planejamento")
+                        .setDescription("Este item requer **múltiplos passos** (Projeto) ou apenas um?")
+                        .setColor(Color.ORANGE).build())
                 .setComponents(ActionRow.of(Button.primary("gtd_multistep_yes", "Projeto (Múltiplos)"),
                         Button.secondary("gtd_multistep_no", "Ação Única")))
                 .queue();
@@ -120,13 +131,15 @@ public class GTDListener extends ListenerAdapter {
     private void handleActionableNo(ButtonInteractionEvent event, GTDCaptureSession session) {
         session.setCurrentStep(GTDCaptureSession.FlowStep.PROCESSING_NOTION);
         event.editMessageEmbeds(new EmbedBuilder()
-                .setTitle("📂 Arquivamento")
-                .setDescription("Para onde deve ir este item **não acionável**?")
-                .setColor(Color.LIGHT_GRAY).build())
+                        .setTitle("📂 Arquivamento")
+                        .setDescription("Para onde deve ir este item **não acionável**?")
+                        .setColor(Color.LIGHT_GRAY).build())
                 .setComponents(
-                        ActionRow.of(Button.danger("gtd_trash", "Lixo"), Button.primary("gtd_someday", "Talvez/Um dia"),
-                                Button.secondary("gtd_reference", "Referência")))
-                .queue();
+                        ActionRow.of(
+                                Button.danger("gtd_trash", "Lixo"), Button.primary("gtd_someday", "Talvez/Um dia"),
+                                Button.secondary("gtd_reference", "Referência")
+                        )
+                ).queue();
     }
 
     private void handleMultistepYes(ButtonInteractionEvent event, GTDCaptureSession session, String userId) {
@@ -135,8 +148,7 @@ public class GTDListener extends ListenerAdapter {
                 .setDescription("Sincronizando projeto: **" + session.getRefinedText() + "**...")
                 .setColor(Color.BLUE).build()).setComponents().queue();
         try {
-            Main.getNotionService().createProject(session.getRefinedText(), session.getDescription(),
-                    session.getDueDate());
+            Main.getNotionService().createProject(session.getRefinedText(), session.getDescription(), session.getDueDate());
             event.getHook().editOriginalEmbeds(new EmbedBuilder()
                     .setTitle("✅ Projeto Criado")
                     .setDescription("O projeto **" + session.getRefinedText() + "** foi enviado para o Notion.")
@@ -151,19 +163,19 @@ public class GTDListener extends ListenerAdapter {
     private void handleMultistepNo(ButtonInteractionEvent event, GTDCaptureSession session) {
         session.setCurrentStep(GTDCaptureSession.FlowStep.DECIDING_2MIN);
         event.editMessageEmbeds(new EmbedBuilder()
-                .setTitle("⏳ Regra dos 2 Minutos")
-                .setDescription("Leva menos de **2 minutos** para fazer?")
-                .setColor(Color.YELLOW).build())
+                        .setTitle("⏳ Regra dos 2 Minutos")
+                        .setDescription("Leva menos de **2 minutos** para fazer?")
+                        .setColor(Color.YELLOW).build())
                 .setComponents(ActionRow.of(Button.primary("gtd_2min_yes", "Sim (Fazer agora)"),
                         Button.secondary("gtd_2min_no", "Não (Adiar/Delegar)")))
                 .queue();
     }
 
-    private void handle2MinYes(ButtonInteractionEvent event, GTDCaptureSession session) {
+    private void handle2MinYes(ButtonInteractionEvent event) {
         event.editMessageEmbeds(new EmbedBuilder()
-                .setTitle("⚡ Reação Rápida")
-                .setDescription("**Faça agora!** Assim que terminar, clique abaixo para concluir.")
-                .setColor(Color.GREEN).build())
+                        .setTitle("⚡ Reação Rápida")
+                        .setDescription("**Faça agora!** Assim que terminar, clique abaixo para concluir.")
+                        .setColor(Color.GREEN).build())
                 .setComponents(ActionRow.of(Button.success("gtd_done_now", "Concluído!")))
                 .queue();
     }
@@ -181,9 +193,9 @@ public class GTDListener extends ListenerAdapter {
     private void handle2MinNo(ButtonInteractionEvent event, GTDCaptureSession session) {
         session.setCurrentStep(GTDCaptureSession.FlowStep.DECIDING_DELEGATE_DEFER);
         event.editMessageEmbeds(new EmbedBuilder()
-                .setTitle("🤔 Próximo Passo")
-                .setDescription("Deseja **delegar** para alguém ou **adiar** para você?")
-                .setColor(Color.MAGENTA).build())
+                        .setTitle("🤔 Próximo Passo")
+                        .setDescription("Deseja **delegar** para alguém ou **adiar** para você?")
+                        .setColor(Color.MAGENTA).build())
                 .setComponents(
                         ActionRow.of(Button.primary("gtd_delegate", "Delegar"), Button.secondary("gtd_defer", "Adiar")))
                 .queue();
@@ -200,7 +212,7 @@ public class GTDListener extends ListenerAdapter {
         TextInput deferWhen = TextInput.create("gtd_defer_when", TextInputStyle.SHORT)
                 .setPlaceholder("Ex: Amanhã, 25/12").setRequired(false).build();
         event.replyModal(
-                Modal.create("gtd_modal_defer", "Adiar Tarefa").addComponents(Label.of("Quando?", deferWhen)).build())
+                        Modal.create("gtd_modal_defer", "Adiar Tarefa").addComponents(Label.of("Quando?", deferWhen)).build())
                 .queue();
     }
 
@@ -277,7 +289,14 @@ public class GTDListener extends ListenerAdapter {
     }
 
     private void handleModalDelegate(ModalInteractionEvent event, GTDCaptureSession session, String userId) {
-        String who = event.getValue("gtd_delegate_who").getAsString();
+        ModalMapping delegateWhoMapping = event.getValue("gtd_delegate_who");
+
+        if (delegateWhoMapping == null) {
+            event.reply("Modal value it's null!").setEphemeral(true).queue();
+            return;
+        }
+
+        String who = delegateWhoMapping.getAsString();
         event.deferReply(true).queue();
         Main.getNotionService().createPage(Config.getRequired("DATABASE_WAITING_ID"),
                 session.getRefinedText() + " (Aguardando: " + who + ")", session.getDescription(),
@@ -293,19 +312,18 @@ public class GTDListener extends ListenerAdapter {
     }
 
     private void handleModalDefer(ModalInteractionEvent event, GTDCaptureSession session, String userId) {
-        String when = event.getValue("gtd_defer_when") != null ? event.getValue("gtd_defer_when").getAsString() : "";
+        ModalMapping deferWhenMapping = event.getValue("gtd_defer_when");
+        String when = deferWhenMapping != null ? deferWhenMapping.getAsString() : "";
         event.deferReply(true).queue();
 
         if (!when.isEmpty()) {
             Main.getGeminiService().parseDateAsync(when).thenAccept(parsedDate -> {
                 session.setDueDate(parsedDate);
-                Main.getNotionService().addToActions("[" + when + "] " + session.getRefinedText(),
-                        session.getDescription(), session.getDueDate());
+                Main.getNotionService().addToActions("[" + when + "] " + session.getRefinedText(), session.getDescription(), session.getDueDate());
                 sendFinalDeferEmbed(event.getHook(), session, when);
                 sessionCache.remove(userId);
             }).exceptionally(ex -> {
-                Main.getNotionService().addToActions("[" + when + "] " + session.getRefinedText(),
-                        session.getDescription(), session.getDueDate());
+                Main.getNotionService().addToActions("[" + when + "] " + session.getRefinedText(), session.getDescription(), session.getDueDate());
                 sendFinalDeferEmbed(event.getHook(), session, when + " (Extração falhou)");
                 sessionCache.remove(userId);
                 return null;
@@ -327,9 +345,16 @@ public class GTDListener extends ListenerAdapter {
     }
 
     private void handleModalEdit(ModalInteractionEvent event, GTDCaptureSession session) {
-        session.setRefinedText(event.getValue("gtd_edit_text").getAsString());
-        if (event.getValue("gtd_edit_desc") != null)
-            session.setDescription(event.getValue("gtd_edit_desc").getAsString());
+        ModalMapping editTitleMapping = event.getValue("gtd_edit_text");
+        if (editTitleMapping == null) {
+            event.reply("Modal value it's null!").setEphemeral(true).queue();
+            return;
+        }
+
+        ModalMapping editDescMapping = event.getValue("gtd_edit_desc");
+
+        session.setRefinedText(editTitleMapping.getAsString());
+        if (editDescMapping != null) session.setDescription(editDescMapping.getAsString());
 
         session.setCurrentStep(GTDCaptureSession.FlowStep.REFINED);
 
@@ -361,13 +386,11 @@ public class GTDListener extends ListenerAdapter {
                 .thenAccept(refined -> {
                     session.setRefinedText(refined.title());
                     session.setDueDate(refined.dueDate());
-                    if (refined.description() != null && !refined.description().isEmpty())
-                        session.setDescription(refined.description());
+                    if (refined.description() != null && !refined.description().isEmpty()) session.setDescription(refined.description());
 
                     session.setCurrentStep(GTDCaptureSession.FlowStep.REFINED);
 
-                    ActionRow row = ActionRow.of(Button.primary("gtd_accept", "Aceitar"),
-                            Button.secondary("gtd_edit", "Editar"), Button.danger("gtd_discard", "Descartar"));
+                    ActionRow row = ActionRow.of(Button.primary("gtd_accept", "Aceitar"), Button.secondary("gtd_edit", "Editar"), Button.danger("gtd_discard", "Descartar"));
                     hook.editOriginal(buildRefinementMessage(refined)).setComponents(row).queue();
                 })
                 .exceptionally(ex -> {
