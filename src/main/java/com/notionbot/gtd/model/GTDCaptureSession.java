@@ -6,6 +6,7 @@ public class GTDCaptureSession {
     private String refinedText;
     private String description;
     private String githubContext;
+    private String dueDate;
     private FlowStep currentStep;
 
     public enum FlowStep {
@@ -56,6 +57,14 @@ public class GTDCaptureSession {
 
     public void setGithubContext(String githubContext) {
         this.githubContext = githubContext;
+    }
+
+    public String getDueDate() {
+        return dueDate;
+    }
+
+    public void setDueDate(String dueDate) {
+        this.dueDate = dueDate;
     }
 
     public FlowStep getCurrentStep() {

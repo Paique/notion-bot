@@ -12,13 +12,25 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
+import java.time.LocalDate;
+import java.time.ZoneId;
+import java.util.function.Consumer;
 
+/**
+ * Service for interacting with Google's Gemini AI.
+ * Handles task refinement and date parsing with automatic retries.
+ */
 public class GeminiService {
+    public record GeminiResult(String title, String dueDate, String description) {
+    }
+
     private static final Logger logger = LoggerFactory.getLogger(GeminiService.class);
+    private static final String API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent";
+    private static final int MAX_RETRIES = 2;
+
     private final String apiKey;
     private final HttpClient httpClient;
     private final ObjectMapper objectMapper;
-    private static final String API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent";
 
     public GeminiService() {
         this.apiKey = Config.getRequired("GEMINI_API_KEY");
@@ -26,74 +38,162 @@ public class GeminiService {
         this.objectMapper = new ObjectMapper();
     }
 
-    public String refineText(String rawText, String context) {
+    /**
+     * Synchronous wrapper for refineTextAsync.
+     */
+    public GeminiResult refineText(String rawText, String context) {
         try {
-            return refineTextAsync(rawText, context).get(10, TimeUnit.SECONDS);
+            return refineTextAsync(rawText, context).get(15, TimeUnit.SECONDS);
         } catch (Exception e) {
             logger.error("Failed to refine text synchronously: {}", e.getMessage());
-            return rawText;
+            return new GeminiResult(rawText, null, null);
         }
     }
 
-    public CompletableFuture<String> refineTextAsync(String rawText, String contextText) {
-        logger.info("Requesting Gemini to refine text...");
+    /**
+     * Refines a task description using Gemini AI.
+     */
+    public CompletableFuture<GeminiResult> refineTextAsync(String rawText, String contextText) {
+        logger.info("Requesting Gemini to refine text: {}", rawText);
+        CompletableFuture<GeminiResult> future = new CompletableFuture<>();
 
-        CompletableFuture<String> future = new CompletableFuture<>();
+        String prompt = buildRefinePrompt(rawText, contextText);
 
-        try {
-            ObjectNode root = objectMapper.createObjectNode();
-            ObjectNode content = root.putArray("contents").addObject();
-
-            StringBuilder prompt = new StringBuilder();
-            prompt.append("Você é um assistente GTD altamente eficiente. ");
-            if (contextText != null && !contextText.isEmpty()) {
-                prompt.append("Use o seguinte contexto adicional (README/Markdown) para entender melhor a tarefa: \n\n")
-                        .append(contextText)
-                        .append("\n\n");
-            }
-            prompt.append("Refine a seguinte entrada para ser uma tarefa clara, física e acionável em português. ")
-                    .append("Mantenha o título sucinto e direto. Entrada: ")
-                    .append(rawText);
-
-            content.putArray("parts").addObject().put("text", prompt.toString());
-
-            String jsonPayload = objectMapper.writeValueAsString(root);
-
-            HttpRequest request = HttpRequest.newBuilder()
-                    .uri(URI.create(API_URL + "?key=" + apiKey))
-                    .header("Content-Type", "application/json")
-                    .POST(HttpRequest.BodyPublishers.ofString(jsonPayload))
-                    .build();
-
-            httpClient.sendAsync(request, HttpResponse.BodyHandlers.ofString())
-                    .thenApply(response -> {
-                        if (response.statusCode() == 200) {
-                            try {
-                                JsonNode jsonNode = objectMapper.readTree(response.body());
-                                String result = jsonNode.at("/candidates/0/content/parts/0/text").asText(rawText)
-                                        .trim();
-                                future.complete(result);
-                            } catch (Exception e) {
-                                logger.error("Failed to parse Gemini response: {}", e.getMessage());
-                                future.complete(rawText);
-                            }
-                        } else {
-                            logger.error("Gemini API error: {} - {}", response.statusCode(), response.body());
-                            future.complete(rawText);
-                        }
-                        return null;
-                    })
-                    .exceptionally(ex -> {
-                        logger.error("Async request failed: {}", ex.getMessage());
-                        future.complete(rawText);
-                        return null;
-                    });
-
-        } catch (Exception e) {
-            logger.error("Failed to prepare Gemini request: {}", e.getMessage());
-            future.complete(rawText);
-        }
+        executeWithRetry(prompt, MAX_RETRIES,
+                json -> {
+                    String title = json.has("title") ? json.get("title").asText() : rawText;
+                    String dueDate = getJsonString(json, "dueDate");
+                    String description = getJsonString(json, "description");
+                    future.complete(new GeminiResult(title, dueDate, description));
+                },
+                () -> future.complete(new GeminiResult(rawText, null, null)));
 
         return future;
+    }
+
+    /**
+     * Parses a natural language date into ISO 8601.
+     */
+    public CompletableFuture<String> parseDateAsync(String dateInput) {
+        logger.info("Parsing date input: {}", dateInput);
+        CompletableFuture<String> future = new CompletableFuture<>();
+
+        String prompt = buildDatePrompt(dateInput);
+
+        executeWithRetry(prompt, MAX_RETRIES,
+                json -> future.complete(getJsonString(json, "dueDate")),
+                () -> future.complete(null));
+
+        return future;
+    }
+
+    private void executeWithRetry(String prompt, int retriesLeft, Consumer<JsonNode> onSuccess,
+            Runnable onFinalFailure) {
+        try {
+            String payload = buildPayload(prompt);
+            HttpRequest request = buildRequest(payload);
+
+            httpClient.sendAsync(request, HttpResponse.BodyHandlers.ofString())
+                    .thenAccept(response -> {
+                        if (response.statusCode() == 200) {
+                            try {
+                                String resultText = extractTextFromResponse(response.body());
+                                JsonNode resultJson = objectMapper.readTree(cleanJsonMarkdown(resultText));
+                                onSuccess.accept(resultJson);
+                            } catch (Exception e) {
+                                handleRetry(prompt, retriesLeft, onSuccess, onFinalFailure,
+                                        "Parse error: " + e.getMessage());
+                            }
+                            return;
+                        }
+                        handleRetry(prompt, retriesLeft, onSuccess, onFinalFailure,
+                                "API Error " + response.statusCode());
+                    })
+                    .exceptionally(ex -> {
+                        handleRetry(prompt, retriesLeft, onSuccess, onFinalFailure,
+                                "Network/Async error: " + ex.getMessage());
+                        return null;
+                    });
+        } catch (Exception e) {
+            handleRetry(prompt, retriesLeft, onSuccess, onFinalFailure, "Request preparation error: " + e.getMessage());
+        }
+    }
+
+    private void handleRetry(String prompt, int retriesLeft, Consumer<JsonNode> onSuccess, Runnable onFinalFailure,
+            String errorMsg) {
+        logger.warn("{} - Retries left: {}", errorMsg, retriesLeft);
+        if (retriesLeft > 0) {
+            executeWithRetry(prompt, retriesLeft - 1, onSuccess, onFinalFailure);
+            return;
+        }
+        onFinalFailure.run();
+    }
+
+    private String buildPayload(String prompt) throws Exception {
+        ObjectNode root = objectMapper.createObjectNode();
+        root.putArray("contents").addObject()
+                .putArray("parts").addObject()
+                .put("text", prompt);
+        return objectMapper.writeValueAsString(root);
+    }
+
+    private HttpRequest buildRequest(String jsonPayload) {
+        return HttpRequest.newBuilder()
+                .uri(URI.create(API_URL + "?key=" + apiKey))
+                .header("Content-Type", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofString(jsonPayload))
+                .build();
+    }
+
+    private String extractTextFromResponse(String body) throws Exception {
+        JsonNode node = objectMapper.readTree(body);
+        return node.at("/candidates/0/content/parts/0/text").asText();
+    }
+
+    private String cleanJsonMarkdown(String text) {
+        if (text == null)
+            return "{}";
+        String cleaned = text.trim();
+        if (cleaned.startsWith("```json")) {
+            cleaned = cleaned.substring(7);
+        } else if (cleaned.startsWith("```")) {
+            cleaned = cleaned.substring(3);
+        }
+        if (cleaned.endsWith("```")) {
+            cleaned = cleaned.substring(0, cleaned.length() - 3);
+        }
+        return cleaned.trim();
+    }
+
+    private String getJsonString(JsonNode node, String field) {
+        return node.has(field) && !node.get(field).isNull() ? node.get(field).asText() : null;
+    }
+
+    private String buildRefinePrompt(String rawText, String contextText) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("Você é um assistente GTD eficiente. ");
+        if (contextText != null && !contextText.isEmpty()) {
+            sb.append("Contexto: ").append(contextText).append("\n\n");
+        }
+        sb.append(
+                "Refine a entrada para uma tarefa acionável. Extraia título (sem data), calcule data real baseada em hoje (")
+                .append(LocalDate.now(ZoneId.of("America/Sao_Paulo")))
+                .append(") no formato ISO 8601, e uma breve descrição.\n\n")
+                .append("Retorne APENAS um JSON:\n")
+                .append("{\n")
+                .append("  \"title\": \"Título da tarefa\",\n")
+                .append("  \"dueDate\": \"YYYY-MM-DDTHH:mm:ss-03:00\",\n")
+                .append("  \"description\": \"Instruções extras\"\n")
+                .append("}\n\n")
+                .append("Entrada: ").append(rawText);
+        return sb.toString();
+    }
+
+    private String buildDatePrompt(String dateInput) {
+        return "Converta para ISO 8601 sugerida baseada em hoje (" +
+                LocalDate.now(ZoneId.of("America/Sao_Paulo")) +
+                ") ou null se não houver data.\n" +
+                "Retorne apenas JSON: {\"dueDate\": \"...\"}\n" +
+                "Entrada: " + dateInput;
     }
 }
